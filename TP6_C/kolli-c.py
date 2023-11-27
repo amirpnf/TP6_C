@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--diagnostic', action='store_true', 
                         help='whether diagnostics are printed')
     parser.add_argument('-l', '--libpath', nargs='?', type=str,
-                        const='libcollision.so', default='libcol-demo.so',
+                        const='libcollision.so', default='libcollision.so',
                         help='relative path of the collision library')
     args = parser.parse_args()    
     cree_fenetre(WINX, WINY)
