@@ -52,7 +52,7 @@ static void check_collide_wall(Ball ball, double res[2]);
 
 static void execute_collide(Ball* b1, Ball* b2);
 
-static void execute_collide_wall(Ball* ball, int ref);
+static void execute_collide_wall(Ball *ball, int ref);
 
 static void rectilinear(Ball* ball, double t);
 

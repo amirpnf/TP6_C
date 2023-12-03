@@ -95,16 +95,19 @@ static void check_collide_wall(Ball ball, double res[2]) {
 static void execute_collide(Ball *b1, Ball *b2) {
     double cvec[2];
     vecdist(b1->pos, b2->pos, cvec);
-    double len_cvec = vecabs(cvec);
 
+    double len_cvec = vecabs(cvec);
     if (len_cvec == 0.0) {
         return;
     }
 
     double cvec_norm[2] = {cvec[0] / len_cvec, cvec[1] / len_cvec};
+
     double relv[2];
     vecdist(b1->v, b2->v, relv);
+
     double relvproj = proj_len(cvec_norm, relv);
+
     double wr = b2->mass / b1->mass;
 
     double impulse1 = -2 * wr / (1 + wr) * relvproj;
@@ -123,18 +126,27 @@ static void execute_collide_wall(Ball* ball, int ref) {
     double vx = ball->v[0];
     double vy = ball->v[1];
 
-    if (ref == 0) {
-        vx *= -1;
-    } else if (ref == 1) {
-        vy *= -1;
+    switch (ref) {
+        case 0:  
+        case 2: 
+            vx *= -1;
+            break;
+        case 1:  
+        case 3:  
+            vy *= -1;
+            break;
+        default:
+            exit(EXIT_FAILURE);
     }
 
     ball->v[0] = vx;
     ball->v[1] = vy;
 
-    mulvec(ball->v, 1 / FPS, ball->v);
-    vecadd(ball->pos, ball->v, ball->pos);
+    double delta_pos[2];
+    mulvec(ball->v, 1 / FPS, delta_pos);
+    vecadd(ball->pos, delta_pos, ball->pos);
 }
+
 
 
 static void rectilinear(Ball *ball, double t) {
@@ -145,52 +157,56 @@ static void rectilinear(Ball *ball, double t) {
 
 int update_solid(Ball balls[], int count, double elapsed, double winsize[]) {
     double collicnt = 0;
-    double tmin = 0;
-    double localmin = 0;
-    double reftype = 0;
-    double ref = 0;
-    int i, j, b;
-    double machin[2] = {localmin, reftype};
-    while(1) {
-        tmin = 0;
-        double minpair[3] = {0, 0, 0};
-        for(i = 0; i < count; ++i) {
-            for(j = i; j < count; ++j) {
-                if(j != i) {
-                    localmin = check_collide(balls[i], balls[j]);
-                    reftype = -1;
-                } else {
-                    check_collide_wall(balls[i], machin);
-                }
-                if(localmin != 0.0) {
-                    if(tmin == 0.0 || tmin < localmin) {
-                        tmin = localmin;
-                        minpair[0] = i;
-                        minpair[1] = j;
-                        minpair[2] = reftype;
-                    }
+    int b;
+
+    while (elapsed > 0) {
+        double tmin = 0;
+        int i, j;
+        int minpair[3] = {-1, -1, 0}; 
+        double wallmin[2] = {0};
+
+        for (i = 0; i < count; ++i) {
+            for (j = i + 1; j < count; ++j) {
+                double localmin = check_collide(balls[i], balls[j]);
+
+                if (localmin > 0 && (tmin == 0 || localmin < tmin)) {
+                    tmin = localmin;
+                    minpair[0] = i;
+                    minpair[1] = j;
                 }
             }
+
+            check_collide_wall(balls[i], wallmin);
+
+            if (wallmin[0] > 0 && (tmin == 0 || wallmin[0] < tmin)) {
+                tmin = wallmin[0];
+                minpair[0] = i;
+                minpair[1] = -1;
+                minpair[2] = (int) wallmin[1]; 
+            }
         }
-        if(tmin == 0.0) {
-            fprintf(stderr, "impossible error!\n");
-            exit(-1);
-        }
-        if(tmin > elapsed) {
+
+        if (tmin == 0) {
+            for (b = 0; b < count; ++b) {
+                rectilinear(&(balls[b]), elapsed);
+            }
             break;
         }
-        for(b = 0; b < count; ++b) {
+
+        for (b = 0; b < count; ++b) {
             rectilinear(&(balls[b]), tmin);
         }
-        double idx1 = minpair[0];
-        double idx2 = minpair[1];
-        ref = minpair[2];
-        if(idx1 != idx2) { execute_collide(&(balls[(int) idx1]), &(balls[(int) idx2])); }
-        else  { execute_collide_wall(&(balls[(int) idx1]), ref); }
-        collicnt += 1;
+
+        if (minpair[1] == -1) {
+            execute_collide_wall(&(balls[minpair[0]]), minpair[2]);
+        } else {
+            execute_collide(&(balls[minpair[0]]), &(balls[minpair[1]]));
+        }
+
         elapsed -= tmin;
+        collicnt += 1;
     }
-    for(b = 0; b < count; ++b) rectilinear(&balls[b], elapsed);
+
     return (int) collicnt;
 }
 
@@ -202,6 +218,7 @@ double kinetic_energy(const Ball balls[], int count) {
     }
     return sum;
 }
+
 
 double total_momentum(const Ball balls[], int count) {
     double accu[2] = {0};
