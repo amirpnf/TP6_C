@@ -30,9 +30,9 @@ double kinetic_energy(const Ball balls[], int count);
 /* Diagnostic information, total momentum of the system */
 double total_momentum(const Ball balls[], int count);
 
-static void mulvec(double ball[2], double scalar, double res[2]);
+static void mulvec(const double ball[2], double scalar, double res[2]);
 
-static void vecadd(double first[2], double second[2], double newVector[2]);
+static void vecadd(const double first[2], const double second[2], double newVector[2]);
 
 static void vecdist(double first[2], double second[2], double newVector[2]);
 
